@@ -1,0 +1,16 @@
+# Build artifacts
+*.o
+*.out
+
+# Binaries (from cpptude builds)
+cpptudes/*/sudoku
+cpptudes/*/sudoku_sanitized
+
+# Sanitizer / profiler output
+massif.out.*
+heaptrack.*
+
+# IDE
+.vscode/
+.idea/
+*.swp

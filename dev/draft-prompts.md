@@ -1,3 +1,14 @@
+# Draft Prompts
+
+These prompts are used in sequence to generate cpptudes. They encode the project's dual requirements:
+
+- **Requirement A (C++ teaching):** Prompt 1 generates the C++ concept knowledge base. Prompt 3 writes idiomatic, correct C++ code and analysis.
+- **Requirement B (C# bridge):** Prompt 1 identifies where C# intuition conflicts with C++ reality. Prompt 2 maps those conflicts to lesson design. Prompt 3 writes the "C# Bridge" commentary.
+
+The lesson spec produced by Prompt 2 must address both requirements as distinct sections: the C++ concept being taught (A) and the C# habits being corrected (B).
+
+---
+
 ### Prompt 1: The Knowledge Base Generator
 
 **Goal:** Generate the "C# to C++ Transition Guide" with weighted priorities.
@@ -58,7 +69,8 @@
 > A "Lesson Specification" containing:
 > * **Lesson Title:** (e.g., "Sudoku: The Stack & Bitwise Operations")
 > * **The Spec:** (Language-agnostic problem definition)
-> * **The C# Trap:** The specific habit we are baiting the user to use (and how we will block it).
+> * **The C++ Concept (Requirement A):** The primary C++ axiom being taught and why it matters for writing correct, idiomatic C++ — independent of the learner's background.
+> * **The C# Bridge (Requirement B):** The specific C# habit we are baiting the user to use (and how we will block it). How the lesson highlights differences between C# and C++.
 > * **Targeted C++ Axioms:** The specific Critical/Required concepts from the Guide.
 > * **Implementation Strategy:** A high-level directive on how the C++ code should be structured (e.g., "Use `std::array`, avoid all heap allocations").
 > * **Requires Expert Input:** (If applicable) List any Override/Augment decisions that need human review before proceeding to Prompt 3.

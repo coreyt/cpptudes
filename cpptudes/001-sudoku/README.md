@@ -9,36 +9,13 @@
 
 ---
 
-## The C# Instinct vs C++ Reality
+## Overview
 
-**In C#**, you'd naturally write:
+This cpptude teaches **stack allocation and value semantics** — how C++ places data directly in the function's stack frame, how scope governs lifetime, and why this produces fast, predictable code with zero garbage collection.
 
-```csharp
-class Cell {
-    public int? Value { get; set; }
-    public HashSet<int> Candidates { get; } = new();
-}
+The Sudoku solver is the vehicle: its 216-byte board fits entirely on the stack, copies are trivially fast, and the entire solve runs with zero heap allocations.
 
-class Board {
-    private Cell[,] cells = new Cell[9, 9];  // 81 heap objects!
-}
-```
-
-This creates **81+ heap allocations**, scattered across memory, managed by the GC.
-
-**In C++**, we write:
-
-```cpp
-struct Board {
-    std::array<uint16_t, 81> cells;     // 162 bytes, contiguous
-    std::array<uint16_t, 9> row_used;   // 18 bytes
-    std::array<uint16_t, 9> col_used;   // 18 bytes
-    std::array<uint16_t, 9> box_used;   // 18 bytes
-};
-// Total: 216 bytes. On the stack. Zero heap. In L1 cache.
-```
-
-When you write `Board board{};`, those 216 bytes live **right here, in this stack frame**. No `new`. No GC. No pointer chasing.
+> **C# Bridge:** If you're coming from C#, this cpptude targets the instinct to `new` everything onto the heap. In C#, `new Cell[9, 9]` creates 81+ heap-allocated objects managed by the GC. In C++, `Board board{};` places 216 contiguous bytes on the stack — no allocator, no GC, no pointer chasing.
 
 ---
 
@@ -84,9 +61,9 @@ You should see **zero heap allocations** from our code (the standard library may
 
 ### Part 1: Candidate Sets as Bitmasks
 
-**C# Instinct:** Use `HashSet<int>` to track candidate digits.
+#### The C++ Concept
 
-**C++ Reality:** For small, bounded domains (digits 1-9), a bitmask is superior:
+For small, bounded domains (digits 1-9), a bitmask is the natural representation in C++. Each bit maps to a digit, and set operations become single CPU instructions:
 
 ```cpp
 using CandidateSet = std::uint16_t;
@@ -99,10 +76,10 @@ using CandidateSet = std::uint16_t;
 constexpr CandidateSet ALL_CANDIDATES = 0b0000'0011'1111'1110;
 ```
 
-**Why this matters:**
+Why this matters for performance:
 
-| Operation | HashSet | Bitmask |
-|-----------|---------|---------|
+| Operation | Hash-based set | Bitmask |
+|-----------|----------------|---------|
 | Memory | ~50 bytes | 2 bytes |
 | "Contains 5?" | Hash lookup | `(bits & (1 << 5)) != 0` |
 | "Remove 5" | Hash remove | `bits &= ~(1 << 5)` |
@@ -111,7 +88,15 @@ constexpr CandidateSet ALL_CANDIDATES = 0b0000'0011'1111'1110;
 
 A bitmask operation is literally **one CPU instruction**. No function calls, no memory access, no cache misses.
 
+#### The C# Bridge
+
+In C#, you'd reach for `HashSet<int>` to track candidate digits. That's a heap-allocated, dynamically-sized collection — perfectly reasonable in managed code where the GC handles cleanup and the runtime optimizes allocation. In C++, for a domain this small, a bitmask is idiomatic: it's a value type, fits in a register, and requires zero allocation.
+
 ### Part 2: The Board Structure
+
+#### The C++ Concept
+
+In C++, `struct` members are laid out contiguously in memory. When you declare a local variable of struct type, the entire struct lives on the stack — no allocation, no indirection:
 
 ```cpp
 struct Board {
@@ -124,7 +109,7 @@ struct Board {
 static_assert(sizeof(Board) == 216, "Board should be exactly 216 bytes");
 ```
 
-**Memory layout visualization:**
+Memory layout:
 
 ```
 Board board{};  // Lives on the stack, in this function's frame
@@ -145,7 +130,11 @@ Heap:
 (empty — we allocated nothing)
 ```
 
-**C# Contrast:**
+`static_assert` verifies the layout at compile time. If the struct size changes (e.g., someone adds a field), the build fails immediately.
+
+#### The C# Bridge
+
+In C#, `new Cell[9, 9]` creates 81 separate objects on the managed heap, each with its own object header and GC tracking:
 
 ```
 C# new Cell[9,9]:
@@ -162,11 +151,13 @@ Heap:
 Result: 81+ allocations, scattered memory, cache misses, GC pressure
 ```
 
+The C++ version has one contiguous block of 216 bytes. The C# version has 81+ scattered heap objects. This difference is fundamental: C++ gives you direct control over memory layout.
+
 ### Part 3: Compile-Time Lookup Tables
 
-**C# Instinct:** Compute peer relationships at runtime, maybe in a static constructor.
+#### The C++ Concept
 
-**C++ Reality:** `constexpr` computes values at compile time:
+`constexpr` functions execute at compile time. The compiler evaluates them and embeds the results directly into the binary as static data:
 
 ```cpp
 // This function runs at COMPILE TIME
@@ -184,21 +175,17 @@ inline constexpr auto PEERS = compute_all_peers();
 static_assert(PEERS[0].peers[0] == 1, "Cell 0's first peer should be cell 1");
 ```
 
-When you run the program, `PEERS` is already computed. It's data in the `.rodata` section, not code that runs.
+When you run the program, `PEERS` is already computed. It's data in the `.rodata` section, not code that runs. `static_assert` provides compile-time verification that the computed values are correct.
+
+#### The C# Bridge
+
+In C#, you'd compute peer relationships at runtime — perhaps in a static constructor or a `Lazy<T>`. The data is correct but has runtime initialization cost and lives on the heap. C++ `constexpr` moves this work entirely to the compiler: zero runtime cost, zero allocation, and compile-time verification via `static_assert`.
 
 ### Part 4: Backtracking with Value Semantics
 
-**C# Instinct:** Pass `Board` by reference, manually clone when needed.
+#### The C++ Concept
 
-```csharp
-Board Solve(Board board) {
-    // Need to try different values...
-    var copy = board.Clone();  // Heap allocation!
-    // ...
-}
-```
-
-**C++ Reality:** Pass by value. The copy happens automatically and is trivially fast:
+In C++, passing a struct by value creates an independent copy. For small structs (like our 216-byte Board), this is trivially fast and eliminates the need for explicit clone/copy methods:
 
 ```cpp
 std::optional<Board> solve(Board board) {  // Pass by value = copy
@@ -219,7 +206,7 @@ std::optional<Board> solve(Board board) {  // Pass by value = copy
 }
 ```
 
-**Why copying 216 bytes is fast:**
+Why copying 216 bytes is fast:
 
 1. **L1 cache:** 216 bytes fits entirely in L1 cache (typically 32-64 KB)
 2. **memcpy optimization:** Compilers turn `Board copy = board;` into highly optimized SIMD instructions
@@ -228,18 +215,25 @@ std::optional<Board> solve(Board board) {  // Pass by value = copy
 
 Benchmark: copying a 216-byte struct is typically **< 10 nanoseconds**.
 
-### Part 5: std::optional for "No Solution"
+#### The C# Bridge
 
-**C# Instinct:** Return `null` or throw an exception.
+In C#, you'd pass `Board` by reference and explicitly clone when needed:
 
 ```csharp
-Board? Solve(Board board) {
+Board Solve(Board board) {
+    // Need to try different values...
+    var copy = board.Clone();  // Heap allocation!
     // ...
-    return null;  // No solution
 }
 ```
 
-**C++ Reality:** `std::optional<T>` makes "might not have a value" explicit in the type:
+Each `Clone()` allocates on the heap. In C++, `Board copy = board;` is a stack copy — 216 bytes memcpy'd with no allocator involved. C++ value semantics make copies cheap and automatic for small types, eliminating the need for Clone patterns.
+
+### Part 5: std::optional for "No Solution"
+
+#### The C++ Concept
+
+`std::optional<T>` encodes "might not have a value" directly in the type system. The caller must handle both cases — the type forces it:
 
 ```cpp
 [[nodiscard]] std::optional<Board> solve(Board board) noexcept {
@@ -255,11 +249,20 @@ if (auto result = solve(board)) {
 }
 ```
 
-**Why not exceptions?**
+Why not exceptions? Backtracking expects many "failures" — they're not exceptional. Exceptions have runtime overhead (stack unwinding), and `noexcept` tells the compiler no exceptions will be thrown, enabling optimizations.
 
-- Backtracking expects many "failures" — they're not exceptional
-- Exceptions have runtime overhead (stack unwinding)
-- `noexcept` tells the compiler no exceptions will be thrown, enabling optimizations
+#### The C# Bridge
+
+In C#, you'd return `null` or throw an exception:
+
+```csharp
+Board? Solve(Board board) {
+    // ...
+    return null;  // No solution
+}
+```
+
+C# nullable reference types (`Board?`) are similar in intent, but `null` is pervasive in C# — any reference type can be null whether you intended it or not. C++ `std::optional` is opt-in: a `Board` can never be "null," and only `std::optional<Board>` communicates the possibility of absence.
 
 ---
 
@@ -280,23 +283,17 @@ Our 216-byte `Board`:
 - Accessed sequentially (cache-friendly)
 - No allocation overhead
 
-C# `Cell[9,9]`:
-- 81 objects scattered in heap
-- Each access may be a cache miss
-- GC must track all 81 objects
+### Deterministic Timing
 
-### GC-Free Means Predictable
+Stack-allocated data has deterministic lifetime: it is created when the scope is entered and destroyed when the scope exits. There is no background process managing memory, no unpredictable pauses, and no fragmentation.
 
-In C#, the GC can pause your program at any time to collect garbage. In a game or real-time system, this causes stutters.
+This is why stack allocation matters for C++: it gives you **predictable, fast, automatically-managed memory** for data whose lifetime matches a scope.
 
-Our C++ solver:
-- Allocates nothing on the heap
-- Has deterministic timing
-- Can solve millions of puzzles with zero GC pauses (because there's no GC)
+> **C# Bridge:** In C#, the GC can pause your program at any time to collect garbage. In a game or real-time system, this causes stutters. The C++ solver allocates nothing on the heap, has deterministic timing, and can solve millions of puzzles with zero GC pauses — because there is no GC.
 
 ---
 
-## For the C# Developer: Key Takeaways
+## Key Takeaways
 
 After completing this Cpptude, you should understand:
 
@@ -306,7 +303,7 @@ After completing this Cpptude, you should understand:
 Board board{};  // On the stack. Dies when scope exits.
 ```
 
-No `new`. No `delete`. No GC. The bytes live right here.
+No `new`. No `delete`. No GC. The bytes live right here. In C++, stack allocation is the default for local variables — use it unless you have a reason not to.
 
 ### 2. `std::array` is Your Friend
 
@@ -317,13 +314,15 @@ std::array<int, 9> arr;  // Fixed size, stack allocated, bounds-checked in debug
 Not `int arr[9]` (C-style, no bounds checking, decays to pointer).
 Not `std::vector` (heap allocated, dynamic size).
 
+`std::array` gives you fixed-size, stack-allocated storage with bounds checking in debug builds.
+
 ### 3. Small Structs Should Be Copied
 
 ```cpp
 Board copy = board;  // 216 bytes, trivially fast
 ```
 
-Don't fear copies of small data. Fear pointer indirection and heap allocation.
+Don't fear copies of small data. Fear pointer indirection and heap allocation. Value semantics — passing and copying small structs — is idiomatic C++.
 
 ### 4. Bitmasks Beat Hash Sets for Small Domains
 
@@ -340,11 +339,17 @@ For domains < 64 elements, a bitmask is faster, smaller, and simpler.
 constexpr auto PEERS = compute_all_peers();  // Computed by compiler
 ```
 
-If a value can be known at compile time, let the compiler compute it.
+If a value can be known at compile time, let the compiler compute it. Zero runtime cost, compile-time verification.
 
-### 6. No GC Means No GC Pauses
+### 6. `std::optional` Encodes Absence in the Type
 
-This solver runs in constant memory with deterministic timing. You control exactly when memory is allocated and freed.
+```cpp
+std::optional<Board> result = solve(board);
+```
+
+Use `std::optional` when a value might not exist. The type system forces callers to handle both cases.
+
+> **C# Bridge:** The managed world gives you GC, nullable references, and HashSet out of the box. The C++ equivalents — stack allocation, `std::optional`, bitmasks — are more explicit but give you direct control over memory layout, allocation, and lifetime. That control is the point.
 
 ---
 

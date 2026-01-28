@@ -1,5 +1,32 @@
 # Cpptude Best Practices
 
+## Project & User Requirements
+
+Every design decision in this document flows from three requirements:
+
+**A. Teach core C++ concepts through exercises.**
+Cpptudes are first and foremost C++ etude exercises. The concepts selected, the code written, and the patterns demonstrated must be correct and idiomatic C++ on their own merits.
+
+**B. Bridge specifically from C# to C++:**
+- **B1.** Specific cpptudes address the C# to C++ transition.
+- **B2.** Each cpptude explicitly highlights differences between C# and C++.
+
+**User Requirement:** The user's goal is to transition from a C# developer to a C++ Software Engineer by completing cpptude exercises.
+
+The design principles below serve these requirements as follows:
+
+| Principle | Serves |
+|-----------|--------|
+| 1. Make Wrong Approaches Fail Visibly | A — good C++ teaching |
+| 2. One Primary KAP | A — good C++ teaching |
+| 3. The "C# Trap" Must Be Baited | B — C# bridge |
+| 4. Mechanical Sympathy Over Abstraction | A — good C++ teaching |
+| 5. Modern C++ First | A — good C++ teaching |
+| 6. No Heap Unless Justified | A — good C++ teaching |
+| 7. Compilation Must Be Reproducible | A — good C++ teaching |
+
+---
+
 ## The Core Insight
 
 > **Norvig's pytudes work because Python's idioms are non-obvious to someone who knows another language. The same is true for C++, but the stakes are higher:**
@@ -89,13 +116,16 @@ Every Cpptude must specify:
 
 Before a Cpptude is complete, verify:
 
-- [ ] **Trap works:** A C#-style implementation hits a visible failure
-- [ ] **Axiom is stated:** The correcting principle is explicitly written
+**Requirement A — C++ teaching quality:**
+- [ ] **Axiom is stated:** The correcting C++ principle is explicitly written
 - [ ] **Code compiles:** With specified flags on all target compilers
 - [ ] **Sanitizers pass:** ASan/UBSan report no issues on correct solution
 - [ ] **Benchmark exists:** (if performance-related) Clear threshold separating naive from correct
-- [ ] **"For the C# Developer" section exists:** Explicit contrast with managed-world expectations
 - [ ] **Next Step challenge exists:** Extension that reinforces the primary KAP
+
+**Requirement B — C# bridge:**
+- [ ] **Trap works:** A C#-style implementation hits a visible failure
+- [ ] **"C# Bridge" sections exist:** Explicit contrast with managed-world expectations for each code section
 
 ---
 

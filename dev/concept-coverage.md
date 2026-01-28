@@ -1,10 +1,19 @@
 # C++ Concept Coverage Plan
 
-This document tracks which C++ concepts should be covered by Cpptudes, prioritized by criticality for C# developers transitioning to native code.
+This document tracks which C++ concepts should be covered by Cpptudes.
+
+## Dual Structure
+
+This document serves both project requirements:
+
+- **Requirement A (C++ teaching):** The "Concept," "C++ Axiom," and "Rating" columns define what C++ knowledge each cpptude must teach. The rating scale below rates **C++ concept importance** — how critical the concept is for writing correct, professional C++ code, regardless of the learner's background.
+- **Requirement B (C# bridge):** The "C# Trap" column identifies where managed-runtime intuition conflicts with C++ reality, guiding how each cpptude baits and corrects C# habits.
+
+A concept rated "5 - Critical" is critical **for C++** (e.g., a developer who doesn't understand object lifetime will write dangerous C++ code). The C# Trap column then explains *why* a C# developer is especially likely to get it wrong.
 
 ---
 
-## Rating Scale
+## Rating Scale (C++ Concept Importance)
 
 | Rating | Level | Description |
 |--------|-------|-------------|
@@ -18,32 +27,32 @@ This document tracks which C++ concepts should be covered by Cpptudes, prioritiz
 
 ## Tier 1: Critical (Rating 5)
 
-These concepts address areas where **C# intuition causes C++ code to be unsafe, incorrect, or exhibit undefined behavior.**
+These are **foundational C++ concepts** where misunderstanding leads to unsafe, incorrect, or undefined behavior. The C# Trap column shows why C# developers are especially prone to getting these wrong.
 
 ### Memory & Lifetime
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Stack vs Heap allocation** | All objects live on heap, GC-managed | Values live where declared; scope = lifetime | Sudoku |
-| **RAII (Resource Acquisition Is Initialization)** | `using`/`IDisposable` is optional pattern | Destructor runs unconditionally at scope exit | File Processor |
-| **Object lifetime & scope** | Objects live until GC collects | Objects die at `}` — references become invalid | Iterator Invalidation |
-| **Dangling references** | References can't dangle (GC) | Returning `&local` is UB; references don't extend lifetime | String Parser |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Stack vs Heap allocation** | Values live where declared; scope = lifetime | All objects live on heap, GC-managed | Sudoku |
+| **RAII (Resource Acquisition Is Initialization)** | Destructor runs unconditionally at scope exit | `using`/`IDisposable` is optional pattern | File Processor |
+| **Object lifetime & scope** | Objects die at `}` — references become invalid | Objects live until GC collects | Iterator Invalidation |
+| **Dangling references** | Returning `&local` is UB; references don't extend lifetime | References can't dangle (GC) | String Parser |
 
 ### Value Semantics
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Copy semantics** | `=` creates alias for reference types | `=` creates independent copy for value types | Data Pipeline |
-| **Struct vs Class defaults** | `struct` = value type, `class` = reference type | Both are same; only default visibility differs | (integrated) |
-| **Const correctness** | `readonly` is limited; mutation is normal | `const` is pervasive; immutability is the default assumption | (integrated) |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Copy semantics** | `=` creates independent copy for value types | `=` creates alias for reference types | Data Pipeline |
+| **Struct vs Class defaults** | Both are same; only default visibility differs | `struct` = value type, `class` = reference type | (integrated) |
+| **Const correctness** | `const` is pervasive; immutability is the default assumption | `readonly` is limited; mutation is normal | (integrated) |
 
 ### Undefined Behavior
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Signed integer overflow** | Wraps predictably | UB — compiler assumes it never happens | Overflow Calculator |
-| **Null dereference** | `NullReferenceException` (recoverable) | UB — anything can happen | (integrated) |
-| **Uninitialized variables** | Compiler enforces definite assignment | Reading uninitialized memory is UB | (sanitizer exercises) |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Signed integer overflow** | UB — compiler assumes it never happens | Wraps predictably | Overflow Calculator |
+| **Null dereference** | UB — anything can happen | `NullReferenceException` (recoverable) | (integrated) |
+| **Uninitialized variables** | Reading uninitialized memory is UB | Compiler enforces definite assignment | (sanitizer exercises) |
 
 ---
 
@@ -53,79 +62,79 @@ These concepts are **essential for writing modern, professional C++** but don't 
 
 ### Modern Ownership
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`std::unique_ptr`** | `new` + hope GC cleans up | Single owner; transfer via `std::move` | Tree Builder |
-| **`std::shared_ptr`** | All references are "shared" by default | Shared ownership has cost; prefer unique | Graph Algorithms |
-| **Move semantics** | No equivalent; copies are cheap (refs) | Move transfers resources; leaves source valid-but-empty | Image Pipeline |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`std::unique_ptr`** | Single owner; transfer via `std::move` | `new` + hope GC cleans up | Tree Builder |
+| **`std::shared_ptr`** | Shared ownership has cost; prefer unique | All references are "shared" by default | Graph Algorithms |
+| **Move semantics** | Move transfers resources; leaves source valid-but-empty | No equivalent; copies are cheap (refs) | Image Pipeline |
 
 ### Error Handling
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`std::optional`** | `null` is always an option | Optional makes "might not exist" explicit in type | Config Parser |
-| **`std::expected` (C++23)** | Exceptions for control flow | Expected carries error *or* value; no unwinding | Validator |
-| **Exception safety guarantees** | Exceptions are recoverable always | Must design for basic/strong/nothrow guarantees | Transaction |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`std::optional`** | Optional makes "might not exist" explicit in type | `null` is always an option | Config Parser |
+| **`std::expected` (C++23)** | Expected carries error *or* value; no unwinding | Exceptions for control flow | Validator |
+| **Exception safety guarantees** | Must design for basic/strong/nothrow guarantees | Exceptions are recoverable always | Transaction |
 
 ### String Handling
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`std::string_view`** | Strings are immutable, interned, cheap to slice | Views don't own; underlying string must outlive view | Spell Corrector |
-| **`std::string` allocation** | Strings are magic | `std::string` may heap-allocate; SSO is not guaranteed | Text Processor |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`std::string_view`** | Views don't own; underlying string must outlive view | Strings are immutable, interned, cheap to slice | Spell Corrector |
+| **`std::string` allocation** | `std::string` may heap-allocate; SSO is not guaranteed | Strings are magic | Text Processor |
 
 ### Containers
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`std::vector` growth** | `List<T>` is magic | Vector reallocates; iterators/refs invalidate on growth | Collection Builder |
-| **Iterator invalidation** | Enumeration can't mutate anyway | Each container has specific invalidation rules | Iterator Lab |
-| **`std::array` vs C-array** | Arrays are objects with bounds checking | `std::array` is fixed-size, stack-allocated, bounds-checked in debug | Sudoku |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`std::vector` growth** | Vector reallocates; iterators/refs invalidate on growth | `List<T>` is magic | Collection Builder |
+| **Iterator invalidation** | Each container has specific invalidation rules | Enumeration can't mutate anyway | Iterator Lab |
+| **`std::array` vs C-array** | `std::array` is fixed-size, stack-allocated, bounds-checked in debug | Arrays are objects with bounds checking | Sudoku |
 
 ### Functions & Lambdas
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Lambda captures** | Closures capture by reference, GC keeps alive | Capture by value or ref is explicit; ref captures can dangle | Event System |
-| **`std::function` overhead** | Delegates are cheap | `std::function` type-erases; has overhead vs template | Callback Patterns |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Lambda captures** | Capture by value or ref is explicit; ref captures can dangle | Closures capture by reference, GC keeps alive | Event System |
+| **`std::function` overhead** | `std::function` type-erases; has overhead vs template | Delegates are cheap | Callback Patterns |
 
 ---
 
 ## Tier 3: Important (Rating 3)
 
-These concepts **unlock performance and expressiveness** but require foundation from Tiers 1-2.
+These C++ concepts **unlock performance and expressiveness** but require foundation from Tiers 1-2.
 
 ### Templates & Generic Programming
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Function templates** | Generics with type erasure | Templates instantiate per-type; no runtime cost | Generic Sort |
-| **Concepts (C++20)** | `where T : IComparable` | Concepts constrain templates with clear errors | Constrained Algorithms |
-| **CRTP** | No equivalent | Static polymorphism without vtable | Mixin Pattern |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Function templates** | Templates instantiate per-type; no runtime cost | Generics with type erasure | Generic Sort |
+| **Concepts (C++20)** | Concepts constrain templates with clear errors | `where T : IComparable` | Constrained Algorithms |
+| **CRTP** | Static polymorphism without vtable | No equivalent | Mixin Pattern |
 
 ### Performance & Cache
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **Cache locality** | Memory layout is runtime's problem | Flat, contiguous data is orders of magnitude faster | Game of Life |
-| **`std::vector<T>` vs `std::vector<unique_ptr<T>>`** | Reference types are always indirect | Indirection destroys cache performance | Entity System |
-| **`std::span`** | `Span<T>` is special | `std::span` is just pointer+size; no magic | Array Utilities |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **Cache locality** | Flat, contiguous data is orders of magnitude faster | Memory layout is runtime's problem | Game of Life |
+| **`std::vector<T>` vs `std::vector<unique_ptr<T>>`** | Indirection destroys cache performance | Reference types are always indirect | Entity System |
+| **`std::span`** | `std::span` is just pointer+size; no magic | `Span<T>` is special | Array Utilities |
 
 ### Ranges & Algorithms (C++20)
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`std::ranges` pipelines** | LINQ is lazy and magical | Ranges compose views without allocation | Data Pipeline |
-| **Views vs owning ranges** | LINQ returns `IEnumerable` | Views borrow; lifetime of source matters | Advent of Code |
-| **STL algorithms** | LINQ methods on collections | Algorithms are separate from containers | Algorithm Golf |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`std::ranges` pipelines** | Ranges compose views without allocation | LINQ is lazy and magical | Data Pipeline |
+| **Views vs owning ranges** | Views borrow; lifetime of source matters | LINQ returns `IEnumerable` | Advent of Code |
+| **STL algorithms** | Algorithms are separate from containers | LINQ methods on collections | Algorithm Golf |
 
 ### Compile-Time Programming
 
-| Concept | The C# Trap | The C++ Axiom | Cpptude Candidate |
-|---------|-------------|---------------|-------------------|
-| **`constexpr` functions** | No equivalent (limited `const`) | `constexpr` moves computation to compile time | Lookup Tables |
-| **`consteval` (C++20)** | No equivalent | Guaranteed compile-time evaluation | Compile-Time Sudoku |
-| **`static_assert`** | No equivalent | Compile-time assertions catch errors early | (integrated) |
+| C++ Concept | C++ Axiom *(Req A)* | C# Trap *(Req B)* | Cpptude Candidate |
+|-------------|---------------------|---------------------|-------------------|
+| **`constexpr` functions** | `constexpr` moves computation to compile time | No equivalent (limited `const`) | Lookup Tables |
+| **`consteval` (C++20)** | Guaranteed compile-time evaluation | No equivalent | Compile-Time Sudoku |
+| **`static_assert`** | Compile-time assertions catch errors early | No equivalent | (integrated) |
 
 ---
 

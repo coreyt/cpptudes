@@ -3,9 +3,27 @@
 | Field | Value |
 |-------|-------|
 | **Primary KAP** | Stack Allocation / Value Semantics (Rating 5 - Critical) |
-| **Secondary Concepts** | `std::array`, `constexpr`, bitwise operations, `std::optional` |
+| **Secondary Concepts** | `std::array`, `constexpr`, bitwise operations, `const` introduction, brace initialization |
+| **Prerequisite** | Cpptude #0: Setup Guide (ASan, UBSan, `-Wall -Wextra -Werror` configured) |
 | **Difficulty** | Intermediate |
 | **Constraint** | Zero heap allocations |
+| **Bait** | Learner allocates the board with `new` on the heap |
+| **Failure Signal** | Heap allocation count > 0 (test assertion fails) |
+| **Verification Tool** | Custom allocator test or `heaptrack` asserting zero heap allocations |
+
+---
+
+## Session Structure
+
+This cpptude follows the standard five-phase session model (2-3 hours total).
+
+| Phase | Duration | Activity |
+|-------|----------|----------|
+| **1. Warm-Up and Review** | 15-20 min | Review sanitizer setup from the Setup Guide (#0). Verify ASan and UBSan are working. Briefly discuss what the sanitizers replace (the CLR safety net). |
+| **2. Trap Encounter** | 30-45 min | Present the Sudoku problem. Let the learner attempt a solution using C# instincts -- they will naturally reach for `new` to allocate the board and `HashSet<int>` equivalents for candidates. The guardrail catches the heap allocation. |
+| **3. Concept Introduction** | 20-30 min | Explain stack vs heap allocation, scope-based lifetime, and why C++ defaults to the stack. Introduce `const` and brace initialization. Show the "C# Bridge" contrast: in C#, `new` creates heap objects managed by the GC; in C++, local variables live on the stack and die at scope exit. |
+| **4. Guided Practice** | 30-45 min | Implement the stack-only Sudoku solver together. Walk through `std::array`, bitmask operations, `constexpr` lookup tables, and value-semantics backtracking. Point out `const` usage and brace initialization as they appear. |
+| **5. Independent Practice** | 20-30 min | Learner attempts the Next Step challenge (constexpr validation or puzzle generator). Assign homework. Preview next week: "Next week we build on stack allocation to learn RAII -- automatic resource cleanup." |
 
 ---
 
@@ -19,20 +37,125 @@ The Sudoku solver is the vehicle: its 216-byte board fits entirely on the stack,
 
 ---
 
-## Building & Running
+## The Trap: "All Objects Live on the Heap"
 
-### Basic Build
+### Bait
+
+If you are coming from C#, your instinct for a Sudoku solver looks something like this:
+
+```csharp
+// C# — natural and correct in the managed world
+var board = new Cell[9, 9];          // Heap-allocated, GC-managed
+var candidates = new HashSet<int>(); // Heap-allocated, GC-managed
+```
+
+When you sit down to write C++ for the first time, that instinct translates to:
+
+```cpp
+// C++ — the C# instinct, translated literally
+auto* board = new int[81];           // Heap allocation
+auto* candidates = new std::set<int>(); // Heap allocation
+// ...
+delete[] board;                      // Must remember to free!
+delete candidates;                   // Must remember to free!
+```
+
+This compiles. It runs. It produces correct output. But it is wrong by C++ standards: you are using the heap when the stack is sufficient, and you have taken on manual memory management responsibility for no benefit.
+
+### Failure Signal
+
+This cpptude enforces a **zero heap allocations** constraint. If your solver allocates on the heap, the guardrail catches it:
 
 ```bash
-g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic sudoku.cpp main.cpp -o sudoku
+# heaptrack reports heap allocations from your code
+heaptrack ./sudoku
+# Expected: zero allocations from solver code
+
+# Alternatively, valgrind's massif tool:
+valgrind --tool=massif ./sudoku
+```
+
+If you see heap allocations from the solver (as opposed to I/O library internals), the constraint is violated.
+
+### Verification Tool
+
+The primary verification is the zero-heap constraint enforced by external tooling (`heaptrack` or `valgrind --tool=massif`). The code itself uses `static_assert(sizeof(Board) == 216)` to verify at compile time that the board is a known, fixed-size value type -- not a pointer to heap memory.
+
+### The C++ Axiom
+
+> **Values live where declared. Scope determines lifetime.**
+>
+> In C++, local variables live on the stack by default. When you write `Board board{};`, 216 bytes are placed directly in the current stack frame. When the scope exits (`}`), those bytes are gone -- no garbage collector, no finalizer, no cleanup code. The compiler enforces this unconditionally.
+
+---
+
+## Sidebar: `const` — Compiler-Enforced Contracts
+
+In C#, `readonly` applies only to fields, and immutability is the exception rather than the rule. Most variables are mutable by default, and the language does not have a pervasive mechanism for marking local variables as immutable.
+
+In C++, `const` is a **compiler-enforced contract** that communicates intent about mutation. It is not decoration -- it is a guarantee:
+
+```cpp
+const int digit{5};          // Cannot be modified after initialization
+digit = 6;                   // COMPILE ERROR: assignment of read-only variable
+
+const auto count = candidate_count(candidates);  // Immutable result
+```
+
+**The rule for this curriculum:** Mark variables `const` unless they must be mutated. This is idiomatic C++ and makes your code easier to reason about. The compiler will enforce it.
+
+You will see `const` used pervasively throughout this cpptude. Every subsequent cpptude builds on this practice. In cpptude #2 (File Processor), you will learn about `const` member functions. In cpptude #3 (Parameter Passing), you will learn about `const T&` parameters.
+
+---
+
+## Sidebar: Brace Initialization
+
+C++ has multiple initialization syntaxes. This curriculum uses **brace initialization** (`{}`) as the default:
+
+```cpp
+int x{42};                    // Preferred: brace initialization
+std::string name{"hello"};    // Preferred
+Board board{};                // Preferred: value-initializes all members
+
+int y = 3.14;                 // DANGER: compiles silently, narrows to 3
+int z{3.14};                  // SAFE: compile error, narrowing detected
+```
+
+Why braces? Two reasons:
+
+1. **Narrowing protection.** `int x{3.14}` is a compile error. `int x = 3.14` silently truncates. Braces catch bugs that `=` hides.
+2. **Most vexing parse avoidance.** `Board board();` declares a function (not a variable). `Board board{};` unambiguously creates a Board.
+
+**Exception:** When brace initialization would invoke `std::initializer_list` and you want the size constructor instead, use parentheses: `std::vector<int> v(10)` creates 10 elements, while `std::vector<int> v{10}` creates one element with value 10.
+
+In C#, `new Foo { Property = value }` is an object initializer -- a different concept. C++ brace initialization is about the construction syntax itself, not about setting properties after construction.
+
+---
+
+## Building & Running
+
+### Using CMake (Recommended)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+./build/sudoku
+```
+
+The CMakeLists.txt configures `-Wall -Wextra -Werror -Wpedantic` and sanitizers in Debug mode automatically. See the CMakeLists.txt for details.
+
+### Manual Build
+
+```bash
+g++ -std=c++20 -O2 -Wall -Wextra -Werror -Wpedantic sudoku.cpp main.cpp -o sudoku
 ./sudoku
 ```
 
-### Build with Sanitizers (Recommended for Learning)
+### Manual Build with Sanitizers
 
 ```bash
 g++ -std=c++20 -O1 -g -fsanitize=address,undefined \
-    -Wall -Wextra sudoku.cpp main.cpp -o sudoku
+    -Wall -Wextra -Werror -Wpedantic sudoku.cpp main.cpp -o sudoku
 ./sudoku
 ```
 
@@ -349,6 +472,24 @@ std::optional<Board> result = solve(board);
 
 Use `std::optional` when a value might not exist. The type system forces callers to handle both cases.
 
+### 7. `const` is a Compiler-Enforced Contract
+
+```cpp
+const int digit{5};         // Cannot be modified
+const auto count = f();     // Immutable result
+```
+
+Mark variables `const` unless they must be mutated. This is not decoration -- it is a guarantee the compiler enforces. See the `const` sidebar above for the full explanation.
+
+### 8. Brace Initialization Catches Bugs
+
+```cpp
+int x{42};       // Preferred: prevents narrowing
+Board board{};   // Preferred: value-initializes, avoids most vexing parse
+```
+
+Use `{}` as the default initialization syntax. It prevents narrowing conversions and ambiguity. See the brace initialization sidebar above.
+
 > **C# Bridge:** The managed world gives you GC, nullable references, and HashSet out of the box. The C++ equivalents — stack allocation, `std::optional`, bitmasks — are more explicit but give you direct control over memory layout, allocation, and lifetime. That control is the point.
 
 ---
@@ -389,3 +530,20 @@ This exercises:
 - `<random>` header for random number generation
 - Using the solver as a subroutine
 - Removing clues while maintaining unique solvability
+
+---
+
+## Homework
+
+**Re-read your Sudoku solution. Annotate where each object's lifetime begins and ends.**
+
+For every local variable in `solve()` and `solve_sudoku()`:
+1. Write a comment indicating where the variable is created (scope entry).
+2. Write a comment indicating where the variable is destroyed (scope exit).
+3. For each `Board` copy, note: is this a stack copy or a heap allocation?
+
+This reinforces the primary KAP: in C++, scope determines lifetime. Every local variable is born at its declaration and dies at the closing `}` of its scope. There is no garbage collector involved.
+
+**Time estimate:** 15-20 minutes.
+
+**This homework is optional.** It exists to deepen your understanding, not to gate your progress. If you completed the Next Step challenge during the session, this homework provides additional reinforcement through a different modality (annotation vs. coding).

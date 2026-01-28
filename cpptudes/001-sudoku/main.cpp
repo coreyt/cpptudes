@@ -3,7 +3,7 @@
 // This file demonstrates the solver and verifies the zero-heap constraint.
 //
 // BUILD:
-//   g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic sudoku.cpp main.cpp -o sudoku
+//   g++ -std=c++20 -O2 -Wall -Wextra -Werror -Wpedantic sudoku.cpp main.cpp -o sudoku
 //
 // RUN:
 //   ./sudoku                    # Run all tests
@@ -72,7 +72,7 @@ constexpr const char* WORLDS_HARDEST =
 
 // Normalize puzzle string (remove non-digit characters except '.')
 std::string normalize_puzzle(std::string_view input) {
-    std::string result;
+    std::string result{};
     result.reserve(81);
 
     for (char c : input) {
@@ -172,7 +172,7 @@ bool test_invalid_input() {
     }
 
     // Invalid character
-    std::string invalid(81, 'x');
+    const std::string invalid(81, 'x');
     if (solve_sudoku(invalid)) {
         std::cout << "FAILED (accepted invalid characters)\n";
         return false;

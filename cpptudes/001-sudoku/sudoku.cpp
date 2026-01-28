@@ -4,10 +4,10 @@
 // and the educational commentary.
 //
 // BUILD:
-//   g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic sudoku.cpp main.cpp -o sudoku
+//   g++ -std=c++20 -O2 -Wall -Wextra -Werror -Wpedantic sudoku.cpp main.cpp -o sudoku
 //
 // BUILD WITH SANITIZERS (recommended for learning):
-//   g++ -std=c++20 -O1 -g -fsanitize=address,undefined -Wall -Wextra sudoku.cpp main.cpp -o sudoku
+//   g++ -std=c++20 -O1 -g -fsanitize=address,undefined -Wall -Wextra -Werror -Wpedantic sudoku.cpp main.cpp -o sudoku
 //
 // VERIFY ZERO HEAP ALLOCATIONS:
 //   valgrind --tool=massif ./sudoku
@@ -106,8 +106,8 @@ namespace cpptude {
 // we detect contradictions earlier and prune the search tree more effectively.
 
 [[nodiscard]] constexpr int find_mrv_cell(const Board& board) noexcept {
-    int best_cell = -1;
-    int best_count = 10; // More than any possible candidate count
+    int best_cell{-1};
+    int best_count{10}; // More than any possible candidate count
 
     for (int cell = 0; cell < 81; ++cell) {
         const int count = candidate_count(board.cells[cell]);
@@ -216,7 +216,7 @@ namespace cpptude {
 }
 
 [[nodiscard]] std::string board_to_string(const Board& board) noexcept {
-    std::string result;
+    std::string result{};
     result.reserve(81);
 
     for (int cell = 0; cell < 81; ++cell) {

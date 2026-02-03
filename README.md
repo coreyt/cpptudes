@@ -1,4 +1,4 @@
-# sharptudes-plusplus
+# #tudes++ (sharptudes-plusplus)
 
 "An ***etude*** (a French word meaning *study*) is an instrumental musical composition, usually short, of considerable difficulty,
 and designed to provide practice material for perfecting a particular musical skill." — [*Wikipedia*](https://en.wikipedia.org/wiki/%C3%89tude)

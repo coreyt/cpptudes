@@ -18,6 +18,9 @@ Each cpptude has a lesson README with a concept walkthrough, the C++ source file
 | # | Cpptude | Primary C++ Concept | C# Trap | Rating |
 |---|---------|---------------------|---------|--------|
 | [001](cpptudes/001-sudoku/README.md) | [Sudoku](cpptudes/001-sudoku/) | Stack allocation, value semantics | Heap-allocating everything with `new` | 5 - Critical |
+| [002](cpptudes/002-file-processor/README.md) | [File Processor](cpptudes/002-file-processor/) | RAII, deterministic cleanup | Assuming GC/finalizers clean up resources | 5 - Critical |
+| [003](cpptudes/003-parameter-passing/README.md) | [Parameter Passing](cpptudes/003-parameter-passing/) | Value vs reference parameter modes | Passing large objects by value without noticing copies | 5 - Critical |
+| [004](cpptudes/004-image-pipeline/README.md) | [Image Pipeline](cpptudes/004-image-pipeline/) | Move semantics, ownership transfer | Assuming copies are aliases like C# references | 4 - Required |
 
 See [dev/concept-coverage.md](dev/concept-coverage.md) for the full coverage plan and upcoming cpptudes.
 

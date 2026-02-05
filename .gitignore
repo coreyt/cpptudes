@@ -1,6 +1,10 @@
 # Build artifacts
 *.o
 *.out
+build/
+build-*/
+**/build/
+**/build-*/
 
 # Binaries (from cpptude builds)
 cpptudes/*/sudoku

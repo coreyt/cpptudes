@@ -17,6 +17,28 @@ The log file processor is the vehicle: read a server log, count occurrences of e
 
 > **C# Bridge:** If you're coming from C#, this cpptude targets the instinct that resource cleanup is a "nice to have" backed by the GC. In C#, if you forget to call `Dispose()` on a `FileStream`, the finalizer eventually handles it. In C++, there is no GC, no finalizer, no safety net. If you forget to close a file and an exception propagates, the handle leaks — permanently. RAII eliminates this entire class of bugs by making cleanup automatic and unconditional.
 
+### The C# Instinct
+
+When a C# developer needs to safely process a file, they reach for `try`/`finally` or `using`:
+
+```csharp
+// What a C# developer naturally writes
+var file = File.OpenRead(path);
+try {
+    // process...
+} finally {
+    file?.Dispose();
+}
+
+// Or more idiomatically with 'using' (C# 8+ declaration form):
+using var file = File.OpenRead(path);
+// Dispose() called at end of scope
+```
+
+This works well in C# — the `using` statement provides deterministic cleanup. But notice: you must *opt in* to deterministic cleanup by writing `using`. If you forget, the GC and finalizer provide a safety net (eventually). In C++, there is no safety net. RAII makes deterministic cleanup the default, not an opt-in pattern.
+
+> **Modern C# Note:** C# 8 introduced `using` declarations (without braces), which bring C# closer to RAII — the disposal happens at the end of the enclosing scope. This mirrors C++ destructor behavior. The existence of this feature shows that C++ patterns are valuable enough that C# is adopting them.
+
 ---
 
 ## Building & Running
@@ -203,6 +225,8 @@ The C# developer's instinct is: "Resource cleanup is important but the runtime h
 
 The key mental shift: **In C++, the destructor IS the `using` block, and you get it for free on every object that has one.** You do not opt in. You cannot opt out.
 
+> **C# Note:** If you've worked with `SafeHandle` in C# (the base class for OS handle wrappers like `SafeFileHandle`), you've seen C#'s closest approximation to RAII. `SafeHandle` ensures that even if you forget `Dispose()`, the handle is released when the GC finalizes the object. But in C++, there is no finalizer fallback — RAII is the only mechanism, which makes it both more critical to understand and more reliable when used correctly.
+
 ### Part 2: `const` Member Functions
 
 #### The C++ Concept
@@ -229,7 +253,9 @@ This is the first time you see `const` on a member function. The rule: **if a fu
 
 #### The C# Bridge
 
-C# has `readonly` fields and `init`-only properties, but no equivalent of `const` member functions. In C#, there is no way to declare that a method does not modify the object — you rely on convention and documentation. In C++, the compiler enforces it. This is another instance of the broader C++ principle: make invariants checkable at compile time, not at code review time.
+C# has `readonly` fields and `init`-only properties, but no equivalent of `const` member functions. In C#, there is no way to declare that a method does not modify the object — you rely on convention and documentation. The closest C# gets is the `[Pure]` attribute from Code Contracts, which indicates a method has no side effects, but this is not compiler-enforced — it is merely a hint for static analysis tools.
+
+In C++, the compiler enforces `const`. If you try to modify a non-`mutable` member inside a `const` function, the code does not compile. This is another instance of the broader C++ principle: make invariants checkable at compile time, not at code review time.
 
 ### Part 3: Exception Safety Through RAII
 

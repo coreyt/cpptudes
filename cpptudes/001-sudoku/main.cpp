@@ -186,7 +186,7 @@ bool test_unsolvable() {
     std::cout << "Testing unsolvable puzzle... ";
 
     // Two 1s in the same row — unsolvable
-    std::string unsolvable =
+    const std::string unsolvable =
         "110000000"
         "000000000"
         "000000000"

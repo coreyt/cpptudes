@@ -257,6 +257,56 @@ C# has `ref`, `in`, and `out` parameters, but they are not the default. The defa
 
 This clarity is a feature, not a burden.
 
+### Parameter Mode Comparison Table
+
+| C++ Mode | C# Equivalent | Notes |
+|----------|---------------|-------|
+| `T` (pass by value) | Value type by value, or copying a `struct` | Rare in C# for large types; in C++, this is the default for all types |
+| `const T&` | `in T` (C# 7.2+) for value types | Both prevent copies AND mutation; `in` is C#'s closest match |
+| `T&` | `ref T` | Explicit at both declaration and call site in C# |
+| `T&&` | No equivalent | C# has no concept of "consuming" or "moving from" an argument |
+
+### Why C++ Has Four Modes When C# Has Two
+
+In C#, reference types are always passed by handle — the GC manages the underlying object's lifetime, so there is no need to distinguish between "borrow" and "consume." The GC tracks all references and cleans up when no references remain.
+
+In C++, there is no GC. The caller and callee must agree on who owns the object and for how long. The four parameter modes express this ownership contract:
+
+- **`T`**: "I want my own copy. Your object is unaffected."
+- **`const T&`**: "I will borrow this to read from. I promise not to modify it."
+- **`T&`**: "I will borrow this and may modify it. You keep ownership."
+- **`T&&`**: "Give me ownership. You should not use this object afterward."
+
+### C# `struct` Types and Value Semantics
+
+One alignment between C# and C++: C# `struct` types (value types) ARE passed by value by default, just like C++ types. In C#, if you pass a large `struct` without `ref` or `in`, you copy it:
+
+```csharp
+// C# — struct is copied by value
+void Process(LargeStruct data) { /* data is a copy */ }
+
+// C# 7.2+ — 'in' prevents copy AND prevents mutation (like const T&)
+void Process(in LargeStruct data) { /* data is a readonly reference */ }
+```
+
+The C# `in` parameter modifier (introduced in C# 7.2) is semantically similar to C++ `const T&`: it passes by reference to avoid copying, and it prevents modification. If you understand `in`, you understand `const T&`.
+
+The key difference: in C# you use `in` only for large `struct` types as an optimization. In C++, `const T&` is the idiomatic default for *any* non-trivial type.
+
+### The "Reference Type by Reference" Confusion
+
+A common source of confusion: in C#, "passing by reference" for a reference type (`class`) is different from passing a value type by `ref`. When you pass a `List<int>` to a method, you pass the *handle* (reference) by value. The method receives a copy of the handle pointing to the same underlying object.
+
+```csharp
+// C# — handle is copied, but both handles point to the same List
+void AddItem(List<int> list) {
+    list.Add(42);  // Modifies the original list
+    list = new List<int>();  // Does NOT affect caller's variable
+}
+```
+
+In C++, there is no handle/object distinction for value types. When you pass `T&`, you pass a reference to the actual object. When you pass `T`, you copy the entire object — not a handle to it.
+
 ---
 
 ## Next Step Challenge

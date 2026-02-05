@@ -276,6 +276,12 @@ Result: 81+ allocations, scattered memory, cache misses, GC pressure
 
 The C++ version has one contiguous block of 216 bytes. The C# version has 81+ scattered heap objects. This difference is fundamental: C++ gives you direct control over memory layout.
 
+> **Modern C# Note:** C# 7.2+ introduced `Span<T>` and `stackalloc` for stack allocation scenarios:
+> ```csharp
+> Span<int> board = stackalloc int[81];  // Stack-allocated!
+> ```
+> This brings C# closer to C++ stack semantics. However, `Span<T>` is a `ref struct` with strict lifetime rules — it cannot escape the current scope, cannot be a class field, and cannot be boxed. These restrictions mirror C++ stack semantics: the compiler enforces that stack memory does not outlive its scope. The existence of these features shows that C++ stack allocation patterns are valuable enough that C# is adopting them.
+
 ### Part 3: Compile-Time Lookup Tables
 
 #### The C++ Concept

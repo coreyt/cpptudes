@@ -27,19 +27,27 @@ add_executable(file_processor
 )
 
 # --- Warnings: treat all warnings as errors ---
+# Cross-platform: GCC/Clang flags and MSVC equivalents
 target_compile_options(file_processor PRIVATE
-    -Wall -Wextra -Wpedantic -Werror
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:
+        -Wall -Wextra -Wpedantic -Werror
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /W4 /WX
+    >
 )
 
 # --- Sanitizers: always-on in Debug builds ---
 # ASan and UBSan are infrastructure, not optional debugging tools.
 # They replace the runtime safety net that C# developers rely on.
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(file_processor PRIVATE
+# Uses generator expressions for multi-config generator compatibility.
+target_compile_options(file_processor PRIVATE
+    $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:
+        -fsanitize=address,undefined -fno-omit-frame-pointer -g
+    >
+)
+target_link_options(file_processor PRIVATE
+    $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:
         -fsanitize=address,undefined
-        -fno-omit-frame-pointer
-    )
-    target_link_options(file_processor PRIVATE
-        -fsanitize=address,undefined
-    )
-endif()
+    >
+)

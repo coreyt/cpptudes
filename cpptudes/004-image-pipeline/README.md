@@ -140,18 +140,38 @@ Run the pipeline first with copies, then with `std::move`. Your target is **zero
 
 ---
 
-## The Trap: “Copies Are Just Aliases”
+## The Trap: "Copies Are Just Aliases" (Severity 5)
 
-A C# developer expects:
+This trap targets one of the deepest C# instincts: **assignment creates an alias, not a copy.**
+
+### The C# Mental Model
+
+In C#, when you write:
+
+```csharp
+var a = LoadImage(path);
+var b = a;  // b and a refer to the SAME image object
+b.ApplyFilter();  // This modifies 'a' too — they're aliases
+```
+
+Both `a` and `b` point to the same heap object. The GC tracks that two references exist and will clean up when both go out of scope. This is fundamental to how C# reference types work.
+
+### The C++ Reality
+
+A C# developer writing C++ expects the same behavior:
 
 ```cpp
 ImageBuffer a = load_image(path);
 ImageBuffer b = a;  // C# intuition: b is another reference to the same pixels
 ```
 
-In C++, this is a deep copy of the pixel buffer. If the copy constructor is not implemented correctly, it can cause **double-free** or **use-after-free** bugs. Even when correct, it is slow.
+But in C++, this is a **deep copy** of the pixel buffer. Now you have two independent images, each with its own heap allocation. Modifying `b` does not affect `a`. If the copy constructor is not implemented correctly, it can cause **double-free** or **use-after-free** bugs. Even when correct, it is slow.
 
-Move semantics fix this:
+**This is severity 5** — every C# developer will make this assumption. It is muscle memory from years of working with reference types.
+
+### Move Semantics: The Efficient Alternative
+
+Move semantics provide efficient ownership transfer without copying:
 
 ```cpp
 ImageBuffer a = load_image(path);
@@ -159,6 +179,8 @@ ImageBuffer b = std::move(a); // a is now in a valid-but-empty state
 ```
 
 Now the pixel buffer ownership moves from `a` to `b` without copying.
+
+Note: `std::move` itself is *new* — C# has no equivalent concept. The trap is not about move semantics being unfamiliar (they are); the trap is about **expecting aliases when you get copies**. Move semantics are the solution, not the trap.
 
 ---
 
@@ -182,6 +204,17 @@ The standard library only uses moves in many contexts if the move constructor is
 
 For `ImageBuffer`, the move operations should be `noexcept` because they only swap pointers and integers.
 
+### C# Bridge: Why `noexcept` Has No C# Equivalent
+
+In C#, every operation can potentially throw — at minimum, `OutOfMemoryException` can occur almost anywhere. The GC handles cleanup regardless of whether an exception occurs, so there is no need to distinguish "might throw" from "will not throw" for resource safety.
+
+In C++, the absence of a GC means that exception-safe resource management requires careful design. The `noexcept` specification tells the compiler (and the standard library) that a move operation cannot fail. This guarantee enables optimizations:
+
+- `std::vector` will use move semantics during reallocation only if the move constructor is `noexcept`
+- If moves might throw, the vector must copy to preserve strong exception safety
+
+There is no C# equivalent because C# does not need one — the GC provides a universal safety net that C++ lacks.
+
 ---
 
 ## C# Bridge: Why This Exists at All
@@ -193,6 +226,19 @@ var filtered = Blur(Grayscale(image));
 ```
 
 This allocates a new image for each step, but the GC handles cleanup. In C++, you need to be explicit about ownership to avoid memory leaks and to keep performance predictable. Move semantics gives you a way to write code that looks high-level but still performs like hand-optimized C++.
+
+### Modern C#: `Span<T>` and Quasi-Ownership
+
+If you have used `Span<T>` in modern C# (7.2+), you have experienced a taste of C++ ownership semantics. `Span<T>` is a `ref struct` — it cannot be boxed, cannot be a field of a regular class, and cannot escape to the heap. These restrictions exist because `Span<T>` represents a *borrowed* view into memory that might be stack-allocated.
+
+```csharp
+// C# — Span<T> borrows memory; it does not own it
+Span<byte> span = stackalloc byte[1024];  // Stack allocation!
+ProcessData(span);  // Pass by value, but it's a view, not a copy
+// span cannot outlive this scope
+```
+
+This is similar to how C++ references and `std::span` work: you borrow memory without taking ownership, and the compiler enforces lifetime constraints. The existence of `Span<T>` in C# shows that C++ ownership patterns are valuable enough that C# is adopting them for performance-critical code.
 
 ---
 

@@ -341,7 +341,12 @@ Comment out all three bug functions except one. Rebuild with sanitizers and run 
 3. Explain what happened using the sanitizer's output (allocation site, free site, access site for ASan; operation and values for UBSan).
 4. Write a one-sentence fix for each bug.
 
-Then, trigger one additional bug that we did not demonstrate: a **stack buffer overflow**. Add a function like this:
+Then, trigger one additional bug that we did not demonstrate: a **stack buffer overflow**.
+
+<details>
+<summary>Click to reveal the stack buffer overflow example</summary>
+
+Add a function like this:
 
 ```cpp
 int stack_buffer_overflow() {
@@ -351,6 +356,8 @@ int stack_buffer_overflow() {
 ```
 
 Build with ASan and observe the report. Compare it to the use-after-free report. What is different? What is the same?
+
+</details>
 
 Requirements:
 - Each bug should be tested in isolation (comment out the others).

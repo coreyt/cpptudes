@@ -320,6 +320,34 @@ Design a small API for a `TelemetryIndex` type with these operations:
 
 Write the signatures only. Then justify each parameter mode in one sentence.
 
+<details>
+<summary>Click to reveal example solution</summary>
+
+```cpp
+class TelemetryIndex {
+public:
+    // Takes ownership via move — caller gives up the batch
+    void add_batch(TelemetryBatch batch);
+
+    // Read-only view — does not copy, does not mutate
+    const TelemetryBatch& preview_batch(std::size_t index) const;
+
+    // Mutates this index by incorporating another — source is read-only
+    void merge_from(const TelemetryIndex& other);
+
+    // Returns a copy — caller receives an owned, independent snapshot
+    TelemetryIndex snapshot() const;
+};
+```
+
+**Justifications:**
+- `add_batch(TelemetryBatch batch)`: By-value enables `std::move` at call site for zero-copy ownership transfer.
+- `preview_batch(...) const`: Returns `const&` to avoid copying; `const` method because viewing does not mutate the index.
+- `merge_from(const TelemetryIndex& other)`: `const&` because we read from `other` without modifying it.
+- `snapshot() const`: Returns by value because the caller needs an owned copy; `const` method because creating a snapshot does not mutate the source.
+
+</details>
+
 ---
 
 ## Key Takeaways
